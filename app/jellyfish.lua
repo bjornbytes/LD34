@@ -157,6 +157,12 @@ function Jellyfish:update(dt)
     for j = 1, #points / 2 do
       tentacle.curve:setControlPoint(j, points[j * 2 - 1], points[j * 2])
     end
+
+    table.each(bubbles.list, function(bubble)
+      if math.distance(bubble.x, bubble.y, points[#points - 1], points[#points]) < bubble.size then
+        bubbles:remove(bubble)
+      end
+    end)
   end)
 
   if next(bubbles.list) then
@@ -216,13 +222,13 @@ function Jellyfish:draw()
       table.insert(points, curvePoints[i])
     end
 
-    local roughPoints = curve:render(2)
+    local roughPoints = curve:render(1)
     for i = 1, #roughPoints, 2 do
       table.insert(controlPoints, roughPoints[i])
       table.insert(controlPoints, roughPoints[i + 1])
     end
 
-    local roughPoints = mirror:render(2)
+    local roughPoints = mirror:render(1)
     for i = 1, #roughPoints, 2 do
       table.insert(controlPoints, roughPoints[i])
       table.insert(controlPoints, roughPoints[i + 1])
@@ -244,6 +250,8 @@ function Jellyfish:draw()
   g.setColor(self.color)
   g.setLineWidth(self.lineWidth)
 
+  table.insert(points, points[1])
+  table.insert(points, points[2])
   g.line(points)
 
   if love.keyboard.isDown('`') then
@@ -255,12 +263,14 @@ function Jellyfish:draw()
   end
 
   g.setLineWidth(4)
+  g.setLineJoin('none')
   g.setColor(self.color[1], self.color[2], self.color[3], 200)
   for i = 1, #self.tentacles do
     local tentacle = self.tentacles[i]
-    local points = tentacle.curve:render(5)
+    local points = tentacle.curve:render(3)
     g.line(points)
   end
+  g.setLineJoin('miter')
 
   g.setLineWidth(7)
   g.setColor(255, 255, 255, 100)

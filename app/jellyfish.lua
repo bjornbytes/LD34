@@ -70,6 +70,9 @@ function Jellyfish:init()
   self.outerLipClosedX = self.outerLipStasis[1] - 10
   self.outerLipX = self.outerLipStasis[1]
 
+  self.eyeOffsetX = 0
+  self.eyeOffsetY = 0
+
   self.innerWaterLevel = 0
 end
 
@@ -136,18 +139,18 @@ function Jellyfish:update(dt)
     points[1] = x
     points[2] = y
 
-    for i = 3, #points, 2 do
-      local px, py = points[i - 2], points[i - 1]
-      local x, y = points[i], points[i + 1]
+    for j = 3, #points, 2 do
+      local px, py = points[j - 2], points[j - 1]
+      local x, y = points[j], points[j + 1]
       local dis, dir = math.vector(px, py, x, y)
       local maxDis = self.tentacleDistance
       if dis > maxDis then
-        points[i] = px + math.dx(maxDis, dir)
-        points[i + 1] = py + math.dy(maxDis, dir)
+        points[j] = px + math.dx(maxDis, dir)
+        points[j + 1] = py + math.dy(maxDis, dir)
       end
 
       if self.gravity > 0 then
-        points[i + 1] = points[i + 1] + self.gravity * 2 * dt
+        points[j + 1] = points[j + 1] + self.gravity * 2 * dt
       end
     end
 
@@ -155,6 +158,22 @@ function Jellyfish:update(dt)
       tentacle.curve:setControlPoint(j, points[j * 2 - 1], points[j * 2])
     end
   end)
+
+  if next(bubbles.list) then
+    local nearestBubble, mindis = nil, math.huge
+    table.each(bubbles.list, function(bubble)
+      local dis = math.distance(bubble.x, bubble.y, self.x, self.y)
+      if dis < mindis then
+        nearestBubble, mindis = bubble, dis
+      end
+    end)
+
+    if nearestBubble then
+      local dir = math.direction(self.x, self.y, nearestBubble.x, nearestBubble.y)
+      self.eyeOffsetX = math.lerp(self.eyeOffsetX, math.dx(3, dir), 4 * dt)
+      self.eyeOffsetY = math.lerp(self.eyeOffsetY, math.dy(3, dir), 4 * dt)
+    end
+  end
 end
 
 local function reflect(px, py, x1, y1, x2, y2)
@@ -239,13 +258,20 @@ function Jellyfish:draw()
   g.setColor(self.color[1], self.color[2], self.color[3], 200)
   for i = 1, #self.tentacles do
     local tentacle = self.tentacles[i]
-    local points = tentacle.curve:render(2)
+    local points = tentacle.curve:render(5)
     g.line(points)
   end
 
+  g.setLineWidth(7)
   g.setColor(255, 255, 255, 100)
-  g.circle('line', self.x + math.dx(20, self.direction - math.pi / 2), self.y + math.dy(20, self.direction - math.pi / 2), 4)
-  g.circle('line', self.x + math.dx(20, self.direction + math.pi / 2), self.y + math.dy(20, self.direction + math.pi / 2), 4)
+  g.circle('line', self.x + math.dx(20, self.direction - math.pi / 2), self.y + math.dy(20, self.direction - math.pi / 2), 4, 30)
+  g.circle('line', self.x + math.dx(20, self.direction + math.pi / 2), self.y + math.dy(20, self.direction + math.pi / 2), 4, 30)
+
+  g.setColor(0, 0, 0)
+  g.setPointSize(6)
+  g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction - math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction - math.pi / 2))
+  g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction + math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction + math.pi / 2))
+  g.setPointSize(1)
 end
 
 return Jellyfish

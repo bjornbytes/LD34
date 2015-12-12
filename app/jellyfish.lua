@@ -4,13 +4,14 @@ Jellyfish.color = { 100, 0, 200 }
 Jellyfish.thrust = 150
 Jellyfish.gravityStrength = 20
 Jellyfish.turnFactor = 2
-Jellyfish.tentacleDistance = 25
 
 Jellyfish.lineWidth = 4
 
 function Jellyfish:init()
   self.x = 400
   self.y = 500
+
+  self.tentacleDistance = 1 --25
 
   self.speed = 0
   self.direction = 0
@@ -78,24 +79,21 @@ end
 
 function Jellyfish:update(dt)
   if love.mouse.isDown('l') then
-    self.outerLipX = math.lerp(self.outerLipX, self.outerLipOpenX, 8 * dt)
+    self.outerLipX = math.lerp(self.outerLipX, self.outerLipOpenX, 6 * dt)
 
     -- Figure out how open we are and fill ourselves with water
-    self.innerWaterLevel = (math.max(self.outerLipX - self.outerLipStasis[1], 0) / (self.outerLipOpenX - self.outerLipStasis[1])) ^ 3
+    self.innerWaterLevel = (math.max(self.outerLipX - self.outerLipStasis[1], 0) / (self.outerLipOpenX - self.outerLipStasis[1]))
   elseif love.mouse.isDown('r') then
-    self.outerLipX = math.lerp(self.outerLipX, self.outerLipClosedX, 8 * dt)
+    self.outerLipX = math.lerp(self.outerLipX, self.outerLipClosedX, 6 * dt)
 
     if self.innerWaterLevel > 0 then
-      local closedFactor = math.max(self.outerLipStasis[1] - self.outerLipX, 0) / (self.outerLipStasis[1] - self.outerLipClosedX)
-      self.speed = math.max(self.speed, self.thrust * (1 - closedFactor))
-      local delta = math.min(self.innerWaterLevel, dt)
-      self.innerWaterLevel = self.innerWaterLevel - delta
+      --local closedFactor = math.max(self.outerLipStasis[1] - self.outerLipX, 0) / (self.outerLipStasis[1] - self.outerLipClosedX)
+      self.speed = math.max(self.speed, self.thrust * self.innerWaterLevel)
+      self.innerWaterLevel = self.innerWaterLevel - math.min(self.innerWaterLevel, dt)
     end
   else
     self.outerLipX = math.lerp(self.outerLipX, self.outerLipStasis[1], 2 * dt)
-
-    local delta = math.min(self.innerWaterLevel, dt)
-    self.innerWaterLevel = self.innerWaterLevel - delta
+    self.innerWaterLevel = self.innerWaterLevel - math.min(self.innerWaterLevel, dt)
   end
 
   local x, y = unpack(self.outerLipStasis)
@@ -104,6 +102,7 @@ function Jellyfish:update(dt)
 
   self.direction = math.anglerp(self.direction, math.direction(self.x, self.y, love.mouse.getPosition()), self.turnFactor * dt)
   self.speed = self.speed - math.min(self.speed * dt, self.thrust * dt)
+  if self.speed < 0 then self.speed = 0 end
 
   if self.speed > 0 then
     local dx, dy = math.dx(self.speed, self.direction), math.dy(self.speed, self.direction)
@@ -123,15 +122,28 @@ function Jellyfish:update(dt)
 
   table.each(self.tentacles, function(tentacle, i)
     local points = tentacle.points
+    local openFactor = (self.outerLipX - self.outerLipStasis[1]) / (self.outerLipOpenX - self.outerLipStasis[1])
 
     local x, y
     if i > 2 then
-      x, y = self.curves.bottomMirror:evaluate(i == 3 and .75 or .25)
+      local factor
+      if i == 4 then
+        factor = .75 + (.1 * openFactor)
+      else
+        factor = .25 + (.08 * openFactor)
+      end
+      x, y = self.curves.bottomMirror:evaluate(factor)
     else
       local curve = self.curves.bottom
       curve:translate(self.x, self.y)
       curve:rotate(self.direction + math.pi / 2, self.x, self.y)
-      x, y = self.curves.bottom:evaluate(i == 2 and .25 or .75)
+      local factor
+      if i == 1 then
+        factor = .25 - (.1 * openFactor)
+      else
+        factor = .75 - (.08 * openFactor)
+      end
+      x, y = self.curves.bottom:evaluate(factor)
       curve:rotate(-self.direction - math.pi / 2, self.x, self.y)
       curve:translate(-self.x, -self.y)
     end
@@ -161,6 +173,7 @@ function Jellyfish:update(dt)
     table.each(bubbles.list, function(bubble)
       if math.distance(bubble.x, bubble.y, points[#points - 1], points[#points]) < bubble.size then
         bubbles:remove(bubble)
+        self.tentacleDistance = self.tentacleDistance + .25
       end
     end)
   end)
@@ -180,6 +193,12 @@ function Jellyfish:update(dt)
       self.eyeOffsetY = math.lerp(self.eyeOffsetY, math.dy(3, dir), 4 * dt)
     end
   end
+
+  local clamp = 35
+  if self.x < clamp then self.x = clamp end
+  if self.x > g.getWidth() - clamp then self.x = g.getWidth() - clamp end
+  if self.y < clamp then self.y = clamp end
+  if self.y > g.getHeight() - clamp then self.y = g.getHeight() - clamp end
 end
 
 local function reflect(px, py, x1, y1, x2, y2)
@@ -260,6 +279,9 @@ function Jellyfish:draw()
     for i = 1, #debugPoints do
       g.point(unpack(debugPoints[i]))
     end
+
+    g.setColor(255, 255, 255)
+    g.print(self.innerWaterLevel)
   end
 
   g.setLineWidth(4)

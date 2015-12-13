@@ -15,7 +15,7 @@ function Bubble:update(dt)
   if self.y < -self.size then
     if not hud.dead then
       hud.dead = true
-      local lose = love.audio.newSource('sound/lose2.ogg')
+      local lose = love.audio.newSource('sound/lose.ogg')
       lose:setVolume(.5)
       lose:play()
       table.each(bubbles.list, function(bubble)

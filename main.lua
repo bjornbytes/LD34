@@ -27,7 +27,7 @@ function love.load()
   hud = app.hud()
 
   local ratio = g.getWidth() / g.getHeight()
-  media.wave:send('strength', {waveStrength * ratio, waveStrength})
+  glsl.wave:send('strength', {waveStrength * ratio, waveStrength})
 
   firstGame = false
 end
@@ -39,7 +39,7 @@ function love.update(dt)
     bubbles:update(dt)
   end
   hud:update(dt)
-  media.wave:send('time', time * waveSpeed)
+  glsl.wave:send('time', time * waveSpeed)
 end
 
 function love.draw()
@@ -56,7 +56,7 @@ function love.draw()
   g.setColor(255, 255, 255)
 
   g.setCanvas(backTarget)
-  g.setShader(media.wave)
+  g.setShader(glsl.wave)
   g.draw(drawTarget)
   g.setShader()
 

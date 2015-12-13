@@ -2,7 +2,7 @@ local Bubble = class()
 
 function Bubble:init()
   self.size = 10 + love.math.random() * 10
-  self.color = {love.math.random(20), love.math.random(50, 80), love.math.random(80, 150)}
+  self.color = {love.math.random(20), love.math.random(150, 200), love.math.random(200, 255)}
   self.x = love.math.random() * g.getWidth()
   self.y = g.getHeight() + self.size
   self.floatSpeed = 3 + love.math.random(10)
@@ -13,6 +13,13 @@ end
 function Bubble:update(dt)
   self.y = self.y - self.floatSpeed * dt
   if self.y < -self.size then
+    lives = lives - 1
+    if not hud.dead and lives <= 0 then
+      hud.dead = true
+      local lose = love.audio.newSource('sound/lose.ogg')
+      lose:setVolume(.5)
+      lose:play()
+    end
     bubbles:remove(self)
   elseif self.y > g.getHeight() + self.size then
     self.y = g.getHeight() + self.size

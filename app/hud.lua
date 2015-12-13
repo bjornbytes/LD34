@@ -10,27 +10,34 @@ function Hud:init()
     1, -s
   )
 
-  self.tutorial = true
+  self.smallFont = love.graphics.newFont('font/pfArmaFive.ttf', 16)
+
+  self.tutorial = firstGame
+  self.dead = false
   self.mx, self.my = 0, 0
+
+  self.deadAlpha = 0
 end
 
 function Hud:update(dt)
-  local sin, cos = math.sin(time * 3), math.cos(time * 3)
-  local rate = 5
+  if self.tutorial then
+    local sin, cos = math.sin(time * 3), math.cos(time * 3)
+    local rate = 5
 
-  if sin > 0 then
-    self.my = math.lerp(self.my, 10, math.min(rate * dt, 1))
-  else
-    self.my = math.lerp(self.my, -10, math.min(rate * dt, 1))
+    if sin > 0 then
+      self.my = math.lerp(self.my, 10, math.min(rate * dt, 1))
+    else
+      self.my = math.lerp(self.my, -10, math.min(rate * dt, 1))
+    end
+
+    if cos > 0 then
+      self.mx = math.lerp(self.mx, 10, math.min(rate * dt, 1))
+    else
+      self.mx = math.lerp(self.mx, -10, math.min(rate * dt, 1))
+    end
+  elseif self.dead then
+    self.deadAlpha = math.lerp(self.deadAlpha, 1, math.min(2 * dt, 1))
   end
-
-  if cos > 0 then
-    self.mx = math.lerp(self.mx, 10, math.min(rate * dt, 1))
-  else
-    self.mx = math.lerp(self.mx, -10, math.min(rate * dt, 1))
-  end
-
-  self.smallFont = love.graphics.newFont('font/pfArmaFive.ttf', 16)
 end
 
 function Hud:draw()
@@ -67,11 +74,46 @@ function Hud:draw()
     g.printf('Pop bubbles with tips of tentacles', 600 - 80, y + 100, 160, 'center')
 
     g.printf('Don\'t let bubbles float away!', 0, y + 250, g.getWidth(), 'center')
+  elseif self.dead then
+    g.setColor(0, 0, 0, self.deadAlpha / 3 * 255)
+    g.rectangle('fill', 0, 0, g.getDimensions())
+
+    local x = 200
+    local y = 300
+
+    g.setColor(jellyfish.color)
+    g.setLineWidth(4)
+    for xx = x - 30, x + 30, 20 do
+      local y = y + 10
+      if xx == x - 30 or xx == x + 30 then
+        y = y + 5
+      end
+
+      g.line(xx, y, xx, y + 50)
+    end
+
+    g.push()
+    g.translate(x - jellyfish.x, y - 10 - jellyfish.y)
+    jellyfish.direction = -math.pi / 2
+    jellyfish:draw(true)
+    g.pop()
+
+    g.setColor(200, 200, 200)
+    g.setLineWidth(3)
+    g.line(x - 24, y - 16, x - 16, y - 8)
+    g.line(x - 24, y - 8, x - 16, y - 16)
+
+    g.line(x + 16, y - 16, x + 24, y - 8)
+    g.line(x + 16, y - 8, x + 24, y - 16)
   end
 end
 
 function Hud:mousepressed(x, y, b)
-  self.tutorial = false
+  if self.tutorial then
+    self.tutorial = false
+  elseif self.dead then
+    love.load()
+  end
 end
 
 function Hud:drawMouse(x, y, l, r)

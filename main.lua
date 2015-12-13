@@ -5,15 +5,20 @@ setmetatable(_G, { __index = require('lib/cargo').init('/') })
 waveStrength = .002
 waveSpeed = 4
 
+firstGame = true
+
 function love.load()
   time = 0
+  lives = 1
+  maxLives = lives
+
   drawTarget = g.newCanvas(g.getDimensions())
   backTarget = g.newCanvas(g.getDimensions())
 
   soundscape = love.audio.newSource('sound/background.ogg')
-  soundscape:setVolume(.6)
+  soundscape:setVolume(.7)
   soundscape:setLooping(true)
-  --soundscape:play()
+  soundscape:play()
 
   local joysticks = love.joystick.getJoysticks()
   local inputSource = #joysticks > 0 and joysticks[1] or 'mouse'
@@ -23,12 +28,16 @@ function love.load()
 
   local ratio = g.getWidth() / g.getHeight()
   media.wave:send('strength', {waveStrength * ratio, waveStrength})
+
+  firstGame = false
 end
 
 function love.update(dt)
   time = time + dt
-  jellyfish:update(dt)
-  bubbles:update(dt)
+  if not hud.dead then
+    jellyfish:update(dt)
+    bubbles:update(dt)
+  end
   hud:update(dt)
   media.wave:send('time', time * waveSpeed)
 end
@@ -40,7 +49,9 @@ function love.draw()
   g.rectangle('fill', 0, 0, g.getDimensions())
   if not hud.tutorial then
     bubbles:draw()
-    jellyfish:draw()
+    if not hud.dead then
+      jellyfish:draw()
+    end
   end
   g.setColor(255, 255, 255)
 

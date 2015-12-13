@@ -15,7 +15,7 @@ function Jellyfish:init()
   self.tentacleDistance = 1 --25
 
   self.speed = 0
-  self.direction = 0
+  self.direction = -math.pi / 2
 
   self.gravity = 0
 
@@ -56,9 +56,9 @@ function Jellyfish:init()
 
   for i = 1, 4 do
     local points = { 0, 0 }
-    for i = 1, 9 do
-      table.insert(points, 0)
-      table.insert(points, 5 * i)
+    for j = 1, 9 do
+      table.insert(points, self.x)
+      table.insert(points, self.y)
     end
 
     local curve = love.math.newBezierCurve(points)

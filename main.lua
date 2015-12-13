@@ -15,12 +15,11 @@ function love.load()
   soundscape:setLooping(true)
   --soundscape:play()
 
-  hud = app.hud()
-
   local joysticks = love.joystick.getJoysticks()
   local inputSource = #joysticks > 0 and joysticks[1] or 'mouse'
-  jellyfish = app.jellyfish(inputSource)
   bubbles = app.bubbles()
+  jellyfish = app.jellyfish(inputSource)
+  hud = app.hud()
 
   local ratio = g.getWidth() / g.getHeight()
   media.wave:send('strength', {waveStrength * ratio, waveStrength})
@@ -30,6 +29,7 @@ function love.update(dt)
   time = time + dt
   jellyfish:update(dt)
   bubbles:update(dt)
+  hud:update(dt)
   media.wave:send('time', time * waveSpeed)
 end
 
@@ -38,8 +38,10 @@ function love.draw()
 
   g.setColor(35, 35, 50)
   g.rectangle('fill', 0, 0, g.getDimensions())
-  bubbles:draw()
-  jellyfish:draw()
+  if not hud.tutorial then
+    bubbles:draw()
+    jellyfish:draw()
+  end
   g.setColor(255, 255, 255)
 
   g.setCanvas(backTarget)
@@ -50,10 +52,17 @@ function love.draw()
   g.setCanvas()
   g.draw(backTarget)
 
-  hud:drawMouse(200, 200)
+  hud:draw()
+end
+
+function love.keypressed(key)
+  if key == 'escape' then
+    love.event.quit()
+  end
 end
 
 function love.mousepressed(x, y, b)
+  hud:mousepressed(x, y, b)
   jellyfish:mousepressed(x, y, b)
 end
 

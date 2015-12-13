@@ -16,7 +16,7 @@ function Jellyfish:init(input)
   self.controlScheme = 1
 
   self.x = 400
-  self.y = 500
+  self.y = 400
   self.speed = 0
   self.direction = -math.pi / 2
   self.gravity = 0
@@ -59,7 +59,7 @@ function Jellyfish:init(input)
   self.tentacles = {}
 
   for i = 1, 4 do
-    local points = { 0, 0 }
+    local points = { self.x, self.y }
     for j = 1, 9 do
       table.insert(points, self.x)
       table.insert(points, self.y)
@@ -89,6 +89,13 @@ function Jellyfish:init(input)
 end
 
 function Jellyfish:update(dt)
+  if hud.tutorial then
+    local x, y = unpack(self.outerLipStasis)
+    self.curves.top:setControlPoint(1, self.outerLipX, y)
+    self.curves.bottom:setControlPoint(1, -self.outerLipX + 1, y)
+    return
+  end
+
   local state = self:getState()
   if state == 'open' then
     if self.currentState ~= 'open' then
@@ -102,7 +109,7 @@ function Jellyfish:update(dt)
       self.sounds.open:setVolume(.5 + volumeFactor * .5)
     end
 
-    self.outerLipX = math.lerp(self.outerLipX, self.outerLipOpenX, 6 * dt)
+    self.outerLipX = math.lerp(self.outerLipX, self.outerLipOpenX, math.min(6 * dt, 1))
 
     -- Figure out how open we are and fill ourselves with water
     local openFactor = (math.max(self.outerLipX - self.outerLipStasis[1], 0) / (self.outerLipOpenX - self.outerLipStasis[1]))
@@ -139,7 +146,7 @@ function Jellyfish:update(dt)
       end
     end
 
-    self.outerLipX = math.lerp(self.outerLipX, self.outerLipClosedX, 6 * dt)
+    self.outerLipX = math.lerp(self.outerLipX, self.outerLipClosedX, math.min(6 * dt, 1))
 
     if self.innerWaterLevel > 0 then
       --local closedFactor = math.max(self.outerLipStasis[1] - self.outerLipX, 0) / (self.outerLipStasis[1] - self.outerLipClosedX)
@@ -147,7 +154,7 @@ function Jellyfish:update(dt)
       self.innerWaterLevel = self.innerWaterLevel - math.min(self.innerWaterLevel, dt)
     end
   else
-    self.outerLipX = math.lerp(self.outerLipX, self.outerLipStasis[1], 2 * dt)
+    self.outerLipX = math.lerp(self.outerLipX, self.outerLipStasis[1], math.min(2 * dt, 1))
     self.innerWaterLevel = self.innerWaterLevel - math.min(self.innerWaterLevel, dt)
     self.currentState = 'none'
   end
@@ -246,10 +253,9 @@ function Jellyfish:update(dt)
 
     if nearestBubble then
       local dir = math.direction(self.x, self.y, nearestBubble.x, nearestBubble.y)
-      self.eyeOffsetX = math.lerp(self.eyeOffsetX, math.dx(3, dir), 4 * dt)
-      self.eyeOffsetY = math.lerp(self.eyeOffsetY, math.dy(3, dir), 4 * dt)
+      self.eyeOffsetX = math.lerp(self.eyeOffsetX, math.dx(3, dir), math.min(4 * dt, 1))
+      self.eyeOffsetY = math.lerp(self.eyeOffsetY, math.dy(3, dir), math.min(4 * dt, 1))
     end
-
   end
 
   local clamp = 35
@@ -281,7 +287,7 @@ local function reflect(px, py, x1, y1, x2, y2)
   return xx, yy
 end
 
-function Jellyfish:draw()
+function Jellyfish:draw(onlyBody)
   local points = {}
   local controlPoints = {}
   local debugPoints = {}
@@ -342,6 +348,8 @@ function Jellyfish:draw()
   table.insert(points, points[1])
   table.insert(points, points[2])
   g.line(points)
+
+  if onlyBody then return end
 
   if love.keyboard.isDown('`') then
     g.setColor(255, 255, 255, 100)
@@ -423,7 +431,7 @@ end
 
 function Jellyfish:setDirection(dt)
   if self.input == 'mouse' then
-    self.direction = math.anglerp(self.direction, math.direction(self.x, self.y, love.mouse.getPosition()), self.turnFactor * dt)
+    self.direction = math.anglerp(self.direction, math.direction(self.x, self.y, love.mouse.getPosition()), math.min(self.turnFactor * dt, 1))
   else
     local function getAxisDirection(axis)
       local x = self.input:getGamepadAxis(axis .. 'x')
@@ -439,7 +447,7 @@ function Jellyfish:setDirection(dt)
 
     local targetDirection = getAxisDirection('left') or getAxisDirection('right')
     if targetDirection then
-      self.direction = math.anglerp(self.direction, targetDirection, self.turnFactor * dt)
+      self.direction = math.anglerp(self.direction, targetDirection, math.min(self.turnFactor * dt, 1))
     end
   end
 end

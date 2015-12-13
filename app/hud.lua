@@ -75,7 +75,7 @@ function Hud:draw()
 
     g.printf('Don\'t let bubbles float away!', 0, y + 250, g.getWidth(), 'center')
   elseif self.dead then
-    g.setColor(0, 0, 0, self.deadAlpha / 3 * 255)
+    g.setColor(0, 0, 0, self.deadAlpha / 2 * 255)
     g.rectangle('fill', 0, 0, g.getDimensions())
 
     local x = 200

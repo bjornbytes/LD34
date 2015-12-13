@@ -3,6 +3,7 @@ Bubbles.soundCount = 4
 
 function Bubbles:init()
   self.list = {}
+  self.popped = 0
 
   self.particleCanvas = g.newCanvas(32, 32)
   g.setCanvas(self.particleCanvas)
@@ -27,11 +28,11 @@ function Bubbles:init()
     self.sounds[i] = love.audio.newSource('sound/bubble.ogg')
   end
 
-  for i = 1, 10 do
+  for i = 1, 8 do
     local bubble = app.bubble()
     self.list[bubble] = bubble
     bubble.direction = -math.pi / 2
-    bubble.speed = love.math.random(100, 250)
+    bubble.speed = love.math.random(100, 200)
   end
 end
 
@@ -41,7 +42,7 @@ function Bubbles:update(dt)
   self.particles:update(dt)
   table.with(self.list, 'update', dt)
 
-  if love.math.random() < .35 * dt then
+  if not hud.tutorial and not hud.dead and love.math.random() < .4 * dt then
     local bubble = app.bubble()
     self.list[bubble] = bubble
   end
@@ -53,13 +54,18 @@ function Bubbles:draw()
   table.with(self.list, 'draw')
 end
 
-function Bubbles:remove(instance)
+function Bubbles:remove(instance, legit)
   self.particles:setPosition(instance.x, instance.y)
   for i = 1, 3 do
     local c = instance.color
     self.particles:setColors(c[1], c[2], c[3], 255, c[1], c[2], c[3], 0)
     self.particles:emit(10)
   end
+
+  if legit then
+    self.popped = self.popped + 1
+  end
+
   self.list[instance] = nil
 end
 

@@ -11,15 +11,21 @@ function Hud:init()
   )
 
   self.smallFont = love.graphics.newFont('font/pfArmaFive.ttf', 16)
+  self.bigFont = love.graphics.newFont('font/pfArmaFive.ttf', 32)
+  self.pointer = love.mouse.getSystemCursor('hand')
 
   self.tutorial = firstGame
   self.dead = false
+  self.tutorialFactor = 0
+  self.deadFactor = 0
   self.mx, self.my = 0, 0
 
-  self.deadAlpha = 0
+  self.buttonGeometry = {tutorial = {}, dead = {}}
+  self.buttonActive = {tutorial = {}, dead = {}}
 end
 
 function Hud:update(dt)
+  local buttonKey
   if self.tutorial then
     local sin, cos = math.sin(time * 3), math.cos(time * 3)
     local rate = 5
@@ -35,14 +41,52 @@ function Hud:update(dt)
     else
       self.mx = math.lerp(self.mx, -10, math.min(rate * dt, 1))
     end
+
+    buttonKey = 'tutorial'
   elseif self.dead then
-    self.deadAlpha = math.lerp(self.deadAlpha, 1, math.min(2 * dt, 1))
+    buttonKey = 'dead'
   end
+
+  local hover = false
+  for key, geo in pairs(self.buttonGeometry[buttonKey] or {}) do
+    if math.inside(love.mouse.getX(), love.mouse.getY(), unpack(geo)) then
+      hover = true
+      love.mouse.setCursor(self.pointer)
+      self.buttonActive[buttonKey][key] = love.mouse.isDown('l')
+      break
+    else
+      self.buttonActive[buttonKey][key] = false
+    end
+  end
+
+  if not hover then love.mouse.setCursor() end
+
+  self.tutorialFactor = math.lerp(self.tutorialFactor, self.tutorial and 1 or 0, math.min(10 * dt, 1))
+  self.deadFactor = math.lerp(self.deadFactor, self.dead and 1 or 0, math.min(10 * dt, 1))
 end
 
 function Hud:draw()
-  if self.tutorial then
-    local y = 200
+  local function drawButton(text, ox, oy, group)
+    local w, h = self.smallFont:getWidth(text) + 16, self.smallFont:getHeight() + 16
+    g.setLineWidth(2)
+    g.setColor(70, 70, 90)
+    g.rectangle('fill', ox - 10, oy - 6, w, h)
+    g.setColor(0, 0, 0)
+    if self.buttonActive[group][text] then
+      g.line(ox - 10, oy - 6, ox - 10, oy - 6 + h)
+      g.line(ox - 10, oy - 6, ox - 10 + w, oy - 6)
+    else
+      g.line(ox - 10, oy - 6 + h, ox - 10 + w, oy - 6 + h)
+      g.line(ox - 10 + w, oy - 6, ox - 10 + w, oy - 6 + h)
+    end
+    g.setColor(255, 255, 255)
+    g.print(text, ox, oy)
+
+    self.buttonGeometry[group][text] = {ox - 10, oy - 6, w, h}
+  end
+
+  if self.tutorialFactor > .01 then
+    local y = 200 - g.getHeight() * (1 - self.tutorialFactor)
     self:drawMouse(200 + self.mx, y + self.my, 0, 0)
     self:drawMouse(400, y, math.abs(math.cos(time * 1.5)), math.abs(math.sin(time * 1.5)))
 
@@ -73,13 +117,17 @@ function Hud:draw()
     g.printf('Alternate mouse buttons to move', 400 - 80, y + 100, 160, 'center')
     g.printf('Pop bubbles with tips of tentacles', 600 - 80, y + 100, 160, 'center')
 
-    g.printf('Don\'t let bubbles float away!', 0, y + 250, g.getWidth(), 'center')
-  elseif self.dead then
-    g.setColor(0, 0, 0, self.deadAlpha / 2 * 255)
-    g.rectangle('fill', 0, 0, g.getDimensions())
+    drawButton('Play', g.getWidth() / 2 - self.smallFont:getWidth('Play') / 2, y + 220, 'tutorial')
 
-    local x = 200
-    local y = 300
+    g.printf('Don\'t let bubbles float away!', 0, y + 320, g.getWidth(), 'center')
+
+    g.setFont(self.bigFont)
+    g.printf('Jelly Pop', 0, y - 140, g.getWidth(), 'center')
+  end
+
+  if self.deadFactor > .01 then
+    local x = 220
+    local y = 300 - g.getHeight() * (1 - self.deadFactor) - self.smallFont:getHeight() / 2
 
     g.setColor(jellyfish.color)
     g.setLineWidth(4)
@@ -105,14 +153,30 @@ function Hud:draw()
 
     g.line(x + 16, y - 16, x + 24, y - 8)
     g.line(x + 16, y - 8, x + 24, y - 16)
+
+    g.setColor(255, 255, 255)
+    g.setFont(self.smallFont)
+    g.print('Game over', x + 100, y - 50)
+    g.print('You popped ' .. bubbles.popped .. ' bubbles', x + 100, y - 10)
+
+    drawButton('Restart', x + 100, y + 40, 'dead')
+    drawButton('Quit', x + 200, y + 40, 'dead')
   end
 end
 
-function Hud:mousepressed(x, y, b)
+function Hud:mousereleased(x, y, b)
   if self.tutorial then
-    self.tutorial = false
+    if math.inside(x, y, unpack(self.buttonGeometry.tutorial.Play)) then
+      self.tutorial = false
+    end
   elseif self.dead then
-    love.load()
+    if math.inside(x, y, unpack(self.buttonGeometry.dead.Restart)) then
+      love.load()
+      hud.deadFactor = 1
+      love.mouse.setCursor()
+    elseif math.inside(x, y, unpack(self.buttonGeometry.dead.Quit)) then
+      love.event.quit()
+    end
   end
 end
 

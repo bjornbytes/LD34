@@ -19,8 +19,12 @@ function Bubble:update(dt)
       local lose = love.audio.newSource('sound/lose.ogg')
       lose:setVolume(.5)
       lose:play()
+      table.each(bubbles.list, function(bubble)
+        bubbles:remove(bubble)
+      end)
+    else
+      bubbles:remove(self)
     end
-    bubbles:remove(self)
   elseif self.y > g.getHeight() + self.size then
     self.y = g.getHeight() + self.size
   end

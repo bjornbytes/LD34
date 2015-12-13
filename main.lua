@@ -36,8 +36,8 @@ function love.update(dt)
   time = time + dt
   if not hud.dead then
     jellyfish:update(dt)
-    bubbles:update(dt)
   end
+  bubbles:update(dt)
   hud:update(dt)
   glsl.wave:send('time', time * waveSpeed)
 end
@@ -49,9 +49,7 @@ function love.draw()
   g.rectangle('fill', 0, 0, g.getDimensions())
   if not hud.tutorial then
     bubbles:draw()
-    if not hud.dead then
-      jellyfish:draw()
-    end
+    jellyfish:draw()
   end
   g.setColor(255, 255, 255)
 
@@ -73,9 +71,13 @@ function love.keypressed(key)
 end
 
 function love.mousepressed(x, y, b)
-  hud:mousepressed(x, y, b)
   jellyfish:mousepressed(x, y, b)
 end
+
+function love.mousereleased(x, y, b)
+  hud:mousereleased(x, y, b)
+end
+
 
 function love.gamepadpressed(joystick, button)
   jellyfish:gamepadpressed(joystick, button)

@@ -16,7 +16,7 @@ function Jellyfish:init(input)
   self.controlScheme = 1
 
   self.x = 400
-  self.y = 400
+  self.y = 450
   self.speed = 0
   self.direction = -math.pi / 2
   self.gravity = 0
@@ -235,7 +235,7 @@ function Jellyfish:update(dt)
 
     table.each(bubbles.list, function(bubble)
       if math.distance(bubble.x, bubble.y, points[#points - 1], points[#points]) < bubble.size then
-        bubbles:remove(bubble)
+        bubbles:remove(bubble, true)
         bubbles:playSound()
         self.tentacleDistance = self.tentacleDistance + .25
       end
@@ -291,6 +291,7 @@ function Jellyfish:draw(onlyBody)
   local points = {}
   local controlPoints = {}
   local debugPoints = {}
+  local alpha = (not onlyBody and hud.dead) and (1 - hud.deadFactor) or 1
 
   local function drawCurve(curve, mirror)
     curve:translate(self.x, self.y)
@@ -336,13 +337,13 @@ function Jellyfish:draw(onlyBody)
   drawCurve(self.curves.top, self.curves.topMirror)
   drawCurve(self.curves.bottom, self.curves.bottomMirror)
 
-  g.setColor(self.color[1], self.color[2], self.color[3], 80)
+  g.setColor(self.color[1], self.color[2], self.color[3], 80 * alpha)
   local triangles = love.math.triangulate(controlPoints)
   for i = 1, #triangles do
     g.polygon('fill', triangles[i])
   end
 
-  g.setColor(self.color)
+  g.setColor(self.color[1], self.color[2], self.color[3], 255 * alpha)
   g.setLineWidth(self.lineWidth)
 
   table.insert(points, points[1])
@@ -351,44 +352,21 @@ function Jellyfish:draw(onlyBody)
 
   if onlyBody then return end
 
-  if love.keyboard.isDown('`') then
-    g.setColor(255, 255, 255, 100)
-    g.setPointSize(4)
-    for i = 1, #debugPoints do
-      g.point(unpack(debugPoints[i]))
-    end
-
-    g.setColor(255, 255, 255)
-    g.print(self.innerWaterLevel .. '\n' .. self.tentacleDistance)
-  end
-
   g.setLineWidth(4)
   g.setLineJoin('none')
   for i = 1, #self.tentacles do
     local tentacle = self.tentacles[i]
     local points = tentacle.curve:render(3)
 
-    g.setColor(self.color[1], self.color[2], self.color[3], 200)
+    g.setColor(self.color[1], self.color[2], self.color[3], 200 * alpha ^ 3)
     g.line(points)
 
-    g.setColor(200, 200, 0, 100)
+    g.setColor(200, 200, 0, 100 * alpha)
     g.setPointSize(4)
     g.point(points[#points - 1], points[#points])
     g.setPointSize(1)
   end
   g.setLineJoin('miter')
-
-  -- Googly eyes doe
-  --[[g.setLineWidth(7)
-  g.setColor(255, 255, 255, 100)
-  g.circle('line', self.x + math.dx(20, self.direction - math.pi / 2), self.y + math.dy(20, self.direction - math.pi / 2), 4, 30)
-  g.circle('line', self.x + math.dx(20, self.direction + math.pi / 2), self.y + math.dy(20, self.direction + math.pi / 2), 4, 30)
-
-  g.setColor(0, 0, 0)
-  g.setPointSize(6)
-  g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction - math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction - math.pi / 2))
-  g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction + math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction + math.pi / 2))
-  g.setPointSize(1)]]
 end
 
 function Jellyfish:mousepressed(x, y, b)

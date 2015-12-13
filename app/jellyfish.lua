@@ -21,7 +21,7 @@ function Jellyfish:init(input)
   self.direction = -math.pi / 2
   self.gravity = 0
 
-  self.tentacleDistance = 1 --25
+  self.tentacleDistance = 1
 
   self.curves = {}
   self.curves.top = love.math.newBezierCurve(
@@ -76,9 +76,6 @@ function Jellyfish:init(input)
   self.outerLipClosedX = self.outerLipStasis[1] - 10
   self.outerLipX = self.outerLipStasis[1]
 
-  self.eyeOffsetX = 0
-  self.eyeOffsetY = 0
-
   self.innerWaterLevel = 0
   self.currentState = 'none'
 
@@ -90,9 +87,8 @@ end
 
 function Jellyfish:update(dt)
   if hud.tutorial then
-    local x, y = unpack(self.outerLipStasis)
-    self.curves.top:setControlPoint(1, self.outerLipX, y)
-    self.curves.bottom:setControlPoint(1, -self.outerLipX + 1, y)
+    self.curves.top:setControlPoint(1, self.outerLipX, self.outerLipStasis[2])
+    self.curves.bottom:setControlPoint(1, -self.outerLipX + 1, self.outerLipStasis[2])
     return
   end
 
@@ -149,7 +145,6 @@ function Jellyfish:update(dt)
     self.outerLipX = math.lerp(self.outerLipX, self.outerLipClosedX, math.min(6 * dt, 1))
 
     if self.innerWaterLevel > 0 then
-      --local closedFactor = math.max(self.outerLipStasis[1] - self.outerLipX, 0) / (self.outerLipStasis[1] - self.outerLipClosedX)
       self.speed = math.max(self.speed, self.thrust * self.innerWaterLevel)
       self.innerWaterLevel = self.innerWaterLevel - math.min(self.innerWaterLevel, dt)
     end
@@ -159,13 +154,11 @@ function Jellyfish:update(dt)
     self.currentState = 'none'
   end
 
-  local x, y = unpack(self.outerLipStasis)
-  self.curves.top:setControlPoint(1, self.outerLipX, y)
-  self.curves.bottom:setControlPoint(1, -self.outerLipX + 1, y)
+  self.curves.top:setControlPoint(1, self.outerLipX, self.outerLipStasis[2])
+  self.curves.bottom:setControlPoint(1, -self.outerLipX + 1, self.outerLipStasis[2])
 
   self:setDirection(dt)
-  self.speed = self.speed - math.min(self.speed * dt, self.thrust * dt)
-  if self.speed < 0 then self.speed = 0 end
+  self.speed = math.max(self.speed - math.min(self.speed * dt, self.thrust * dt), 0)
 
   if self.speed > 0 then
     local dx, dy = math.dx(self.speed, self.direction), math.dy(self.speed, self.direction)
@@ -242,27 +235,9 @@ function Jellyfish:update(dt)
     end)
   end)
 
-  if next(bubbles.list) then
-    local nearestBubble, mindis = nil, math.huge
-    table.each(bubbles.list, function(bubble)
-      local dis = math.distance(bubble.x, bubble.y, self.x, self.y)
-      if dis < mindis then
-        nearestBubble, mindis = bubble, dis
-      end
-    end)
-
-    if nearestBubble then
-      local dir = math.direction(self.x, self.y, nearestBubble.x, nearestBubble.y)
-      self.eyeOffsetX = math.lerp(self.eyeOffsetX, math.dx(3, dir), math.min(4 * dt, 1))
-      self.eyeOffsetY = math.lerp(self.eyeOffsetY, math.dy(3, dir), math.min(4 * dt, 1))
-    end
-  end
-
   local clamp = 35
-  if self.x < clamp then self.x = clamp end
-  if self.x > g.getWidth() - clamp then self.x = g.getWidth() - clamp end
-  if self.y < clamp then self.y = clamp end
-  if self.y > g.getHeight() - clamp then self.y = g.getHeight() - clamp end
+  self.x = math.clamp(self.x, clamp, g.getWidth() - clamp)
+  self.y = math.clamp(self.y, clamp, g.getHeight() - clamp)
 
   if self.input ~= 'mouse' then
     local left, right = self.input:getGamepadAxis('triggerleft'), self.input:getGamepadAxis('triggerright')
@@ -290,7 +265,6 @@ end
 function Jellyfish:draw(onlyBody)
   local points = {}
   local controlPoints = {}
-  local debugPoints = {}
   local alpha = (not onlyBody and hud.dead) and (1 - hud.deadFactor) or 1
 
   local function drawCurve(curve, mirror)
@@ -308,8 +282,6 @@ function Jellyfish:draw(onlyBody)
     for i = 1, ct do
       local x, y = curve:getControlPoint(ct - i + 1)
       local rx, ry = reflect(x, y, x1, y1, x2, y2)
-      table.insert(debugPoints, {x, y})
-      table.insert(debugPoints, {rx, ry})
       mirror:setControlPoint(i, rx, ry)
     end
 
@@ -355,8 +327,7 @@ function Jellyfish:draw(onlyBody)
   g.setLineWidth(4)
   g.setLineJoin('none')
   for i = 1, #self.tentacles do
-    local tentacle = self.tentacles[i]
-    local points = tentacle.curve:render(3)
+    local points = self.tentacles[i].curve:render(3)
 
     g.setColor(self.color[1], self.color[2], self.color[3], 200 * alpha ^ 3)
     g.line(points)
@@ -364,7 +335,6 @@ function Jellyfish:draw(onlyBody)
     g.setColor(200, 200, 0, 100 * alpha)
     g.setPointSize(4)
     g.point(points[#points - 1], points[#points])
-    g.setPointSize(1)
   end
   g.setLineJoin('miter')
 end

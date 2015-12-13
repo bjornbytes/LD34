@@ -13,10 +13,9 @@ end
 function Bubble:update(dt)
   self.y = self.y - self.floatSpeed * dt
   if self.y < -self.size then
-    lives = lives - 1
-    if not hud.dead and lives <= 0 then
+    if not hud.dead then
       hud.dead = true
-      local lose = love.audio.newSource('sound/lose.ogg')
+      local lose = love.audio.newSource('sound/lose2.ogg')
       lose:setVolume(.5)
       lose:play()
       table.each(bubbles.list, function(bubble)

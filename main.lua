@@ -9,8 +9,6 @@ firstGame = true
 
 function love.load()
   time = 0
-  lives = 1
-  maxLives = lives
 
   drawTarget = g.newCanvas(g.getDimensions())
   backTarget = g.newCanvas(g.getDimensions())

@@ -5,19 +5,23 @@ Jellyfish.thrust = 150
 Jellyfish.gravityStrength = 20
 Jellyfish.turnFactor = 2
 Jellyfish.pushThreshold = 200
+Jellyfish.controllerDeadZone = .25
 
 Jellyfish.lineWidth = 4
 
-function Jellyfish:init()
+function Jellyfish:init(input)
+  self.input = input
+  self.lastPressed = nil
+  self.lastTriggerValues = {left = 0, right = 0}
+  self.controlScheme = 1
+
   self.x = 400
   self.y = 500
-
-  self.tentacleDistance = 1 --25
-
   self.speed = 0
   self.direction = -math.pi / 2
-
   self.gravity = 0
+
+  self.tentacleDistance = 1 --25
 
   self.curves = {}
   self.curves.top = love.math.newBezierCurve(
@@ -85,7 +89,8 @@ function Jellyfish:init()
 end
 
 function Jellyfish:update(dt)
-  if love.mouse.isDown('l') then
+  local state = self:getState()
+  if state == 'open' then
     if self.currentState ~= 'open' then
       self.currentState = 'open'
       if self.sounds.open:isPlaying() then
@@ -102,7 +107,7 @@ function Jellyfish:update(dt)
     -- Figure out how open we are and fill ourselves with water
     local openFactor = (math.max(self.outerLipX - self.outerLipStasis[1], 0) / (self.outerLipOpenX - self.outerLipStasis[1]))
     self.innerWaterLevel = openFactor
-  elseif love.mouse.isDown('r') then
+  elseif state == 'close' then
     if self.currentState ~= 'close' then
       self.currentState = 'close'
       if self.sounds.close:isPlaying() then
@@ -151,7 +156,7 @@ function Jellyfish:update(dt)
   self.curves.top:setControlPoint(1, self.outerLipX, y)
   self.curves.bottom:setControlPoint(1, -self.outerLipX + 1, y)
 
-  self.direction = math.anglerp(self.direction, math.direction(self.x, self.y, love.mouse.getPosition()), self.turnFactor * dt)
+  self:setDirection(dt)
   self.speed = self.speed - math.min(self.speed * dt, self.thrust * dt)
   if self.speed < 0 then self.speed = 0 end
 
@@ -252,6 +257,18 @@ function Jellyfish:update(dt)
   if self.x > g.getWidth() - clamp then self.x = g.getWidth() - clamp end
   if self.y < clamp then self.y = clamp end
   if self.y > g.getHeight() - clamp then self.y = g.getHeight() - clamp end
+
+  if self.input ~= 'mouse' then
+    local left, right = self.input:getGamepadAxis('triggerleft'), self.input:getGamepadAxis('triggerright')
+    if self.lastTriggerValues.left < .5 and left > .5 then
+      self.lastPressed = 'left'
+    elseif self.lastTriggerValues.right < .5 and right > .5 then
+      self.lastPressed = 'right'
+    end
+
+    self.lastTriggerValues.left = self.input:getGamepadAxis('triggerleft')
+    self.lastTriggerValues.right = self.input:getGamepadAxis('triggerright')
+  end
 end
 
 local function reflect(px, py, x1, y1, x2, y2)
@@ -364,6 +381,67 @@ function Jellyfish:draw()
   g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction - math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction - math.pi / 2))
   g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction + math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction + math.pi / 2))
   g.setPointSize(1)]]
+end
+
+function Jellyfish:mousepressed(x, y, b)
+  if self.input == 'mouse' then
+    self.lastPressed = b == 'l' and 'left' or (b == 'r' and 'right' or self.lastPressed)
+  end
+end
+
+function Jellyfish:gamepadpressed(joystick, button)
+  if joystick == self.input then
+    if button == 'leftshoulder' then
+      self.lastPressed = 'left'
+    elseif button == 'rightshoulder' then
+      self.lastPressed = 'right'
+    elseif button == 'select' then
+      self.controlScheme = 1 - self.controlScheme
+    end
+  end
+end
+
+function Jellyfish:getState()
+  if self.input == 'mouse' then
+    if love.mouse.isDown('l') and self.lastPressed == 'left' then
+      return 'open'
+    elseif love.mouse.isDown('r') and self.lastPressed == 'right' then
+      return 'close'
+    else
+      return 'none'
+    end
+  else
+    if (self.input:isGamepadDown('leftshoulder') or self.input:getGamepadAxis('triggerleft') > .5) and self.lastPressed == 'left' then
+      return 'open'
+    elseif (self.input:isGamepadDown('rightshoulder') or self.input:getGamepadAxis('triggerright') > .5) and self.lastPressed == 'right' then
+      return 'close'
+    else
+      return 'none'
+    end
+  end
+end
+
+function Jellyfish:setDirection(dt)
+  if self.input == 'mouse' then
+    self.direction = math.anglerp(self.direction, math.direction(self.x, self.y, love.mouse.getPosition()), self.turnFactor * dt)
+  else
+    local function getAxisDirection(axis)
+      local x = self.input:getGamepadAxis(axis .. 'x')
+      local y = self.input:getGamepadAxis(axis .. 'y')
+      local dis, dir = math.vector(0, 0, x, y)
+      if self.controlScheme == 1 then
+        return dis > self.controllerDeadZone and dir or nil
+      else
+        if x > self.controllerDeadZone then return self.direction + math.pi / 2
+        elseif x < -self.controllerDeadZone then return self.direction - math.pi / 2 end
+      end
+    end
+
+    local targetDirection = getAxisDirection('left') or getAxisDirection('right')
+    if targetDirection then
+      self.direction = math.anglerp(self.direction, targetDirection, self.turnFactor * dt)
+    end
+  end
 end
 
 return Jellyfish

@@ -15,7 +15,9 @@ function love.load()
   soundscape:setLooping(true)
   soundscape:play()
 
-  jellyfish = app.jellyfish()
+  local joysticks = love.joystick.getJoysticks()
+  local inputSource = #joysticks > 0 and joysticks[1] or 'mouse'
+  jellyfish = app.jellyfish(inputSource)
   bubbles = app.bubbles()
 
   local ratio = g.getWidth() / g.getHeight()
@@ -45,4 +47,12 @@ function love.draw()
 
   g.setCanvas()
   g.draw(backTarget)
+end
+
+function love.mousepressed(x, y, b)
+  jellyfish:mousepressed(x, y, b)
+end
+
+function love.gamepadpressed(joystick, button)
+  jellyfish:gamepadpressed(joystick, button)
 end

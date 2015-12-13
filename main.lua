@@ -13,7 +13,9 @@ function love.load()
   soundscape = love.audio.newSource('sound/background.ogg')
   soundscape:setVolume(.6)
   soundscape:setLooping(true)
-  soundscape:play()
+  --soundscape:play()
+
+  hud = app.hud()
 
   local joysticks = love.joystick.getJoysticks()
   local inputSource = #joysticks > 0 and joysticks[1] or 'mouse'
@@ -47,6 +49,8 @@ function love.draw()
 
   g.setCanvas()
   g.draw(backTarget)
+
+  hud:drawMouse(200, 200)
 end
 
 function love.mousepressed(x, y, b)

@@ -4,6 +4,7 @@ Jellyfish.color = { 100, 0, 200 }
 Jellyfish.thrust = 150
 Jellyfish.gravityStrength = 20
 Jellyfish.turnFactor = 2
+Jellyfish.pushThreshold = 200
 
 Jellyfish.lineWidth = 4
 
@@ -75,15 +76,64 @@ function Jellyfish:init()
   self.eyeOffsetY = 0
 
   self.innerWaterLevel = 0
+  self.currentState = 'none'
+
+  self.sounds = {
+    open = love.audio.newSource('sound/in.ogg'),
+    close = love.audio.newSource('sound/out.ogg')
+  }
 end
 
 function Jellyfish:update(dt)
   if love.mouse.isDown('l') then
+    if self.currentState ~= 'open' then
+      self.currentState = 'open'
+      if self.sounds.open:isPlaying() then
+        self.sounds.open:rewind()
+      else
+        self.sounds.open:play()
+      end
+      local volumeFactor = -math.min(0, self.outerLipX - self.outerLipStasis[1]) / (self.outerLipOpenX - self.outerLipStasis[1])
+      self.sounds.open:setVolume(.5 + volumeFactor * .5)
+    end
+
     self.outerLipX = math.lerp(self.outerLipX, self.outerLipOpenX, 6 * dt)
 
     -- Figure out how open we are and fill ourselves with water
-    self.innerWaterLevel = (math.max(self.outerLipX - self.outerLipStasis[1], 0) / (self.outerLipOpenX - self.outerLipStasis[1]))
+    local openFactor = (math.max(self.outerLipX - self.outerLipStasis[1], 0) / (self.outerLipOpenX - self.outerLipStasis[1]))
+    self.innerWaterLevel = openFactor
   elseif love.mouse.isDown('r') then
+    if self.currentState ~= 'close' then
+      self.currentState = 'close'
+      if self.sounds.close:isPlaying() then
+        self.sounds.close:rewind()
+      else
+        self.sounds.close:play()
+      end
+      self.sounds.close:setVolume(self.innerWaterLevel)
+
+      -- Push bubbles
+      if next(bubbles.list) then
+        if self.innerWaterLevel > .25 then
+          table.each(bubbles.list, function(bubble)
+            local dis, dir = math.vector(self.x, self.y, bubble.x, bubble.y)
+            local angleDiff = math.abs(math.anglediff(dir, self.direction))
+            local angleThreshold = 3 * math.pi / 4
+            if dis < 35 and angleDiff < angleThreshold then
+              dir = self.direction + math.pi
+              angleDiff = 2 * math.pi
+            end
+
+            if dis < self.pushThreshold and angleDiff > angleThreshold then
+              local magnitude = (1 - (dis / self.pushThreshold))
+              bubble.speed = math.max(bubble.speed, self.thrust * magnitude * self.innerWaterLevel)
+              bubble.direction = dir
+            end
+          end)
+        end
+      end
+    end
+
     self.outerLipX = math.lerp(self.outerLipX, self.outerLipClosedX, 6 * dt)
 
     if self.innerWaterLevel > 0 then
@@ -94,6 +144,7 @@ function Jellyfish:update(dt)
   else
     self.outerLipX = math.lerp(self.outerLipX, self.outerLipStasis[1], 2 * dt)
     self.innerWaterLevel = self.innerWaterLevel - math.min(self.innerWaterLevel, dt)
+    self.currentState = 'none'
   end
 
   local x, y = unpack(self.outerLipStasis)
@@ -173,6 +224,7 @@ function Jellyfish:update(dt)
     table.each(bubbles.list, function(bubble)
       if math.distance(bubble.x, bubble.y, points[#points - 1], points[#points]) < bubble.size then
         bubbles:remove(bubble)
+        bubbles:playSound()
         self.tentacleDistance = self.tentacleDistance + .25
       end
     end)
@@ -192,6 +244,7 @@ function Jellyfish:update(dt)
       self.eyeOffsetX = math.lerp(self.eyeOffsetX, math.dx(3, dir), 4 * dt)
       self.eyeOffsetY = math.lerp(self.eyeOffsetY, math.dy(3, dir), 4 * dt)
     end
+
   end
 
   local clamp = 35
@@ -281,20 +334,27 @@ function Jellyfish:draw()
     end
 
     g.setColor(255, 255, 255)
-    g.print(self.innerWaterLevel)
+    g.print(self.innerWaterLevel .. '\n' .. self.tentacleDistance)
   end
 
   g.setLineWidth(4)
   g.setLineJoin('none')
-  g.setColor(self.color[1], self.color[2], self.color[3], 200)
   for i = 1, #self.tentacles do
     local tentacle = self.tentacles[i]
     local points = tentacle.curve:render(3)
+
+    g.setColor(self.color[1], self.color[2], self.color[3], 200)
     g.line(points)
+
+    g.setColor(200, 200, 0, 100)
+    g.setPointSize(4)
+    g.point(points[#points - 1], points[#points])
+    g.setPointSize(1)
   end
   g.setLineJoin('miter')
 
-  g.setLineWidth(7)
+  -- Googly eyes doe
+  --[[g.setLineWidth(7)
   g.setColor(255, 255, 255, 100)
   g.circle('line', self.x + math.dx(20, self.direction - math.pi / 2), self.y + math.dy(20, self.direction - math.pi / 2), 4, 30)
   g.circle('line', self.x + math.dx(20, self.direction + math.pi / 2), self.y + math.dy(20, self.direction + math.pi / 2), 4, 30)
@@ -303,7 +363,7 @@ function Jellyfish:draw()
   g.setPointSize(6)
   g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction - math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction - math.pi / 2))
   g.point(self.x + self.eyeOffsetX + math.dx(20, self.direction + math.pi / 2), self.y + self.eyeOffsetY + math.dy(20, self.direction + math.pi / 2))
-  g.setPointSize(1)
+  g.setPointSize(1)]]
 end
 
 return Jellyfish

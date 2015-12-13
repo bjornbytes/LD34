@@ -2,23 +2,31 @@ require 'lib/util'
 g = love.graphics
 setmetatable(_G, { __index = require('lib/cargo').init('/') })
 
+waveStrength = .002
+waveSpeed = 4
+
 function love.load()
   time = 0
   drawTarget = g.newCanvas(g.getDimensions())
   backTarget = g.newCanvas(g.getDimensions())
 
+  soundscape = love.audio.newSource('sound/background.ogg')
+  soundscape:setVolume(.6)
+  soundscape:setLooping(true)
+  soundscape:play()
+
   jellyfish = app.jellyfish()
   bubbles = app.bubbles()
 
   local ratio = g.getWidth() / g.getHeight()
-  media.wave:send('strength', {.002 * ratio, .002})
+  media.wave:send('strength', {waveStrength * ratio, waveStrength})
 end
 
 function love.update(dt)
   time = time + dt
   jellyfish:update(dt)
   bubbles:update(dt)
-  media.wave:send('time', time * 2)
+  media.wave:send('time', time * waveSpeed)
 end
 
 function love.draw()

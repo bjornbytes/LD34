@@ -42,7 +42,7 @@ function Bubbles:update(dt)
   self.particles:update(dt)
   table.with(self.list, 'update', dt)
 
-  if not hud.tutorial and not hud.dead and love.math.random() < .4 * dt then
+  if not hud.tutorial and not hud.dead and love.math.random() < .28 * dt then
     local bubble = app.bubble()
     self.list[bubble] = bubble
   end

@@ -339,6 +339,11 @@ function Jellyfish:draw(onlyBody)
   g.setLineJoin('miter')
 end
 
+function Jellyfish:keypressed(key)
+  if key == 'z' then self.lastPressed = 'left'
+  elseif key == 'x' then self.lastPressed = 'right' end
+end
+
 function Jellyfish:mousepressed(x, y, b)
   if self.input == 'mouse' then
     self.lastPressed = b == 'l' and 'left' or (b == 'r' and 'right' or self.lastPressed)
@@ -359,9 +364,9 @@ end
 
 function Jellyfish:getState()
   if self.input == 'mouse' then
-    if love.mouse.isDown('l') and self.lastPressed == 'left' then
+    if (love.mouse.isDown('l') or love.keyboard.isDown('z')) and self.lastPressed == 'left' then
       return 'open'
-    elseif love.mouse.isDown('r') and self.lastPressed == 'right' then
+    elseif (love.mouse.isDown('r') or love.keyboard.isDown('x')) and self.lastPressed == 'right' then
       return 'close'
     else
       return 'none'

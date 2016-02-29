@@ -66,6 +66,7 @@ function love.keypressed(key)
   if key == 'escape' then
     love.event.quit()
   end
+  jellyfish:keypressed(key)
 end
 
 function love.mousepressed(x, y, b)
